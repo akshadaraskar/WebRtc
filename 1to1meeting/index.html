@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <style>
+        .userbox {
+            margin-left: 20px;
+            padding: 8px;
+            width: 450px;
+            /* height:366px; */
+            border: 1px solid transparent;
+            color: var(--fc-medium);
+            border-color: var(--powder-400);
+            background-color: burlywood;
+            float: left;
+        }
+
+            .userbox video {
+                display: inline-block;
+                border: 1px solid red;
+                margin: 0;
+                padding: 0;
+                width: 450px;
+                height: 300px;
+            }
+
+        .toolbox {
+        }
+    </style>
+    <meta name="viewport" content="width=device-width" />
+    <title>RTC Demo</title>
+    <!-- <link href="https://vjs.zencdn.net/7.8.2/video-js.css" rel="stylesheet" />
+    <script src="https://vjs.zencdn.net/7.8.2/video.js"></script> -->
+
+    <script src="jquery-3.4.1.min.js"></script>
+    <script src="jquery.signalR-2.2.2.min.js"></script>
+    <!--<script src="https://webrtcss.azurewebsites.net/signalr/hubs"></script>-->
+    <script src="https://localhost:44338/signalr/hubs"></script>
+    <!--<script src="video-stream-merger.js"></script>-->
+    <script src="demo.js"></script>
+
+    <script>
+        var connection_initiated = false;
+
+
+        $(function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const user_id = urlParams.get('uid');
+            const meeting_id = urlParams.get('mid');
+            if (user_id == null || meeting_id == null) {
+                alert('user id or meeting id missing');
+                return;
+            }
+            $('#meetingname').text(meeting_id);
+            $('#me h2').text(user_id + '(Me)');
+
+            // Set up the SignalR connection
+            $.connection.hub.logging = true;
+            var hub = $.connection.webRtcHub;
+            $.connection.hub.url = 'https://localhost:44338/signalr/hubs';
+            //$.connection.hub.url = 'https://webrtcss.azurewebsites.net/signalr/hubs';
+
+            var serverFn = function (data) {
+                hub.server.send(data);
+            };
+
+            hub.client.newMessage = async function (data) {
+                await Demo.ExecuteClientFn(data);
+            };
+
+            hub.client.informAboutUsers = function (other_user_id) {
+
+                $('#other h2').text(other_user_id);
+            };
+
+            hub.client.otherUserLeft = function () {
+                $('#other h2').text("");
+                Demo.closeConnection();
+            };
+
+            
+            $.connection.hub.start(function () {
+                console.log('connected to signal server.');
+            }).done(function () {
+                if (user_id != "" && meeting_id != "") {
+                    hub.server.connect(user_id, meeting_id).done(function (other_user) {
+                        if (other_user) {
+                            $('#other h2').text(other_user.user_id);
+                            Demo._initiateFirstConn();
+                        }
+                    });
+                }
+            });
+
+            
+
+            Demo.init(serverFn);
+        });
+    </script>
+</head>
+<body>
+    <h1 id='meetingname'></h1>
+    <div id='divUsers'>
+        <div id="me" class="userbox">
+            <h2></h2>
+            <div>
+                <video autoplay muted id="localVideoCtr" />
+            </div>
+        </div>
+        <div id="other" class="userbox">
+            <h2></h2>
+            <div>
+                <video autoplay muted id="remoteVideoCtr" />
+            </div>
+        </div>
+        <!--<audio autoplay controls id="localAudioCtr" ></audio>-->
+        <audio autoplay controls style="display:none" id="remoteAudioCtr"></audio>
+    </div>
+    <div style="clear: both;"></div>
+    <div class="toolbox">
+        <button id="btnMuteUnmute">UnMute</button>
+        <button id="btnStartStopCam">Start Camera</button>
+        <button id="btnStartStopScreenshare">Screen Share</button>
+    </div>
+
+    <!-- <video autoplay muted controls id="videoCtr" width="480" height="100"></video> -->
+    <!-- <video autoplay muted controls id="remoteVideoCtr" width="480" height="100"></video> -->
+    <!--<video autoplay muted controls id="videoCtrRec" width="100" height="100" style="display:none"></video>-->
+    <!-- <button id="startConnection">Start Connection</button> -->
+    <!--<button id="btnStartReco">Start Recording</button>
+    <button id="btnPauseReco" style="display:none">Pause</button>
+    <button id="btnResumeReco" style="display:none">Resume</button>
+    <button id="btnStopReco" style="display:none">Stop</button>
+
+    <a href="" id="downloadRecording" style="display:none">Download</a>-->
+    <!--<br>
+    <br>
+    <a href="../index.html">Home</a>-->
+</body>
+</html>
